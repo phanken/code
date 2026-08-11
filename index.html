@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Code Editor</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #d1d5db;
+      --header: #ffffff;
+      --button: #111827;
+      --button-text: #ffffff;
+      --editor-bg: #0f172a;
+      --editor-text: #e5e7eb;
+      --accent: #2563eb;
+    }
+
+    body.dark {
+      --bg: #0b1120;
+      --panel: #111827;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #273449;
+      --header: #111827;
+      --button: #f9fafb;
+      --button-text: #111827;
+      --editor-bg: #020617;
+      --editor-text: #e5e7eb;
+      --accent: #60a5fa;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 58px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      background: var(--header);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      filter: brightness(0.97);
+    }
+
+    .run-btn {
+      background: var(--button);
+      color: var(--button-text);
+      border-color: var(--button);
+      font-weight: 700;
+    }
+
+    .workspace {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(320px, 46%) 1fr;
+    }
+
+    .editor-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .tabs {
+      height: 46px;
+      display: flex;
+      align-items: end;
+      gap: 4px;
+      padding: 0 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header);
+    }
+
+    .tab {
+      height: 38px;
+      min-width: 78px;
+      border: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: 6px 6px 0 0;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    .editors {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      background: var(--editor-bg);
+    }
+
+    .editor {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      resize: none;
+      border: 0;
+      outline: 0;
+      padding: 16px;
+      background: var(--editor-bg);
+      color: var(--editor-text);
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 15px;
+      line-height: 1.55;
+      tab-size: 2;
+      display: none;
+    }
+
+    .editor.active {
+      display: block;
+    }
+
+    .preview-panel {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+    }
+
+    .preview-header {
+      height: 46px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--header);
+      font-weight: 700;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: white;
+    }
+
+    .mobile-switch {
+      display: none;
+    }
+
+    @media (max-width: 800px) {
+      html, body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100vh;
+        height: auto;
+      }
+
+      .topbar {
+        height: auto;
+        min-height: 58px;
+        padding: 10px;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        font-size: 16px;
+      }
+
+      .actions {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      .workspace {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 112px);
+      }
+
+      .editor-panel,
+      .preview-panel {
+        flex: 1;
+        min-height: 0;
+        border-right: 0;
+      }
+
+      .preview-panel {
+        display: none;
+      }
+
+      body.show-preview .editor-panel {
+        display: none;
+      }
+
+      body.show-preview .preview-panel {
+        display: flex;
+      }
+
+      .mobile-switch {
+        display: inline-block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">&lt;/&gt;</div>
+        Mini Code Editor
+      </div>
+
+      <div class="actions">
+        <button class="run-btn" id="runBtn">▶ Run</button>
+        <button id="autoBtn">Auto: ON</button>
+        <button id="resetBtn">Reset</button>
+        <button id="themeBtn">🌙 Dark</button>
+        <button class="mobile-switch" id="mobileBtn">Preview</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="editor-panel">
+        <div class="tabs">
+          <button class="tab active" data-target="htmlEditor">HTML</button>
+          <button class="tab" data-target="cssEditor">CSS</button>
+          <button class="tab" data-target="jsEditor">JavaScript</button>
+        </div>
+
+        <div class="editors">
+          <textarea id="htmlEditor" class="editor active" spellcheck="false"></textarea>
+          <textarea id="cssEditor" class="editor" spellcheck="false"></textarea>
+          <textarea id="jsEditor" class="editor" spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <section class="preview-panel">
+        <div class="preview-header">
+          <span>Preview</span>
+          <span class="status" id="status">Sẵn sàng</span>
+        </div>
+        <iframe id="preview" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const htmlEditor = document.getElementById("htmlEditor");
+    const cssEditor = document.getElementById("cssEditor");
+    const jsEditor = document.getElementById("jsEditor");
+    const preview = document.getElementById("preview");
+    const status = document.getElementById("status");
+
+    const runBtn = document.getElementById("runBtn");
+    const autoBtn = document.getElementById("autoBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const themeBtn = document.getElementById("themeBtn");
+    const mobileBtn = document.getElementById("mobileBtn");
+
+    let autoRun = true;
+    let timer = null;
+
+    const defaultCode = {
+      html: `<div class="card">
+  <h1>Xin chào 👋</h1>
+  <p>Đây là trình viết code của bạn.</p>
+  <button onclick="hello()">Bấm thử</button>
+</div>`,
+      css: `body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+}
+
+.card {
+  width: 320px;
+  padding: 28px;
+  text-align: center;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.12);
+}
+
+h1 {
+  color: #2563eb;
+}
+
+button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  cursor: pointer;
+}`,
+      js: `function hello() {
+  alert("JavaScript đang chạy!");
+}`
+    };
+
+    function loadCode() {
+      htmlEditor.value = localStorage.getItem("mini_html") ?? defaultCode.html;
+      cssEditor.value = localStorage.getItem("mini_css") ?? defaultCode.css;
+      jsEditor.value = localStorage.getItem("mini_js") ?? defaultCode.js;
+
+      const savedTheme = localStorage.getItem("mini_theme");
+      if (savedTheme === "dark") {
+        document.body.classList.add("dark");
+        themeBtn.textContent = "☀️ Light";
+      }
+    }
+
+    function saveCode() {
+      localStorage.setItem("mini_html", htmlEditor.value);
+      localStorage.setItem("mini_css", cssEditor.value);
+      localStorage.setItem("mini_js", jsEditor.value);
+    }
+
+    function runCode() {
+      const html = htmlEditor.value;
+      const css = cssEditor.value;
+      const js = jsEditor.value;
+
+      const output = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${css}</style>
+</head>
+<body>
+  ${html}
+  <script>
+    try {
+      ${js}
+    } catch (error) {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<pre style="padding:12px;color:#b91c1c;background:#fee2e2;">JS Error: ' +
+        error.message.replace(/</g, "&lt;") +
+        "</pre>"
+      );
+    }
+  <\/script>
+</body>
+</html>`;
+
+      preview.srcdoc = output;
+      saveCode();
+
+      status.textContent = "Đã chạy " + new Date().toLocaleTimeString("vi-VN");
+    }
+
+    function scheduleRun() {
+      saveCode();
+      if (!autoRun) return;
+
+      clearTimeout(timer);
+      status.textContent = "Đang cập nhật...";
+      timer = setTimeout(runCode, 300);
+    }
+
+    document.querySelectorAll(".tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".editor").forEach(e => e.classList.remove("active"));
+
+        tab.classList.add("active");
+        document.getElementById(tab.dataset.target).classList.add("active");
+      });
+    });
+
+    [htmlEditor, cssEditor, jsEditor].forEach(editor => {
+      editor.addEventListener("input", scheduleRun);
+
+      editor.addEventListener("keydown", e => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.value =
+            editor.value.substring(0, start) +
+            "  " +
+            editor.value.substring(end);
+
+          editor.selectionStart = editor.selectionEnd = start + 2;
+          scheduleRun();
+        }
+      });
+    });
+
+    runBtn.addEventListener("click", runCode);
+
+    autoBtn.addEventListener("click", () => {
+      autoRun = !autoRun;
+      autoBtn.textContent = autoRun ? "Auto: ON" : "Auto: OFF";
+      if (autoRun) runCode();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (!confirm("Bạn muốn khôi phục code mẫu?")) return;
+
+      htmlEditor.value = defaultCode.html;
+      cssEditor.value = defaultCode.css;
+      jsEditor.value = defaultCode.js;
+      saveCode();
+      runCode();
+    });
+
+    themeBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+
+      const dark = document.body.classList.contains("dark");
+      themeBtn.textContent = dark ? "☀️ Light" : "🌙 Dark";
+      localStorage.setItem("mini_theme", dark ? "dark" : "light");
+    });
+
+    mobileBtn.addEventListener("click", () => {
+      document.body.classList.toggle("show-preview");
+      mobileBtn.textContent =
+        document.body.classList.contains("show-preview")
+          ? "Code"
+          : "Preview";
+    });
+
+    loadCode();
+    runCode();
+  </script>
+</body>
+</html>
